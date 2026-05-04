@@ -1,5 +1,6 @@
 import os
 import psycopg
+import json
 from langchain_postgres.vectorstores import PGVector
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.embeddings.fake import FakeEmbeddings
@@ -69,6 +70,45 @@ def init_db():
                     action VARCHAR(50)
                 )
             """)
+            cur.execute("DROP TABLE IF EXISTS sync_state")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS data_connectors (
+                    id VARCHAR(100) PRIMARY KEY,
+                    type VARCHAR(50),
+                    config JSONB,
+                    last_sync_value VARCHAR(255)
+                )
+            """)
+        conn.commit()
+        
+        # Auto-seed
+        with conn.cursor() as cur:
+            if os.environ.get("IMAP_SERVER") and os.environ.get("IMAP_USERNAME"):
+                email_id = f"email_{os.environ.get('IMAP_USERNAME')}"
+                cur.execute("SELECT id FROM data_connectors WHERE id = %s", (email_id,))
+                if not cur.fetchone():
+                    email_config = {
+                        "host": os.environ.get("IMAP_SERVER"),
+                        "user": os.environ.get("IMAP_USERNAME"),
+                        "password": os.environ.get("IMAP_PASSWORD", ""),
+                        "folder": os.environ.get("IMAP_FOLDER", "INBOX")
+                    }
+                    cur.execute(
+                        "INSERT INTO data_connectors (id, type, config) VALUES (%s, %s, %s)",
+                        (email_id, "email_imap", json.dumps(email_config))
+                    )
+            
+            repo_path = os.environ.get("LOCAL_GIT_REPO_PATH", ".")
+            if repo_path:
+                abs_path = os.path.abspath(repo_path)
+                git_id = f"git_{abs_path}"
+                cur.execute("SELECT id FROM data_connectors WHERE id = %s", (git_id,))
+                if not cur.fetchone():
+                    git_config = {"repo_path": repo_path}
+                    cur.execute(
+                        "INSERT INTO data_connectors (id, type, config) VALUES (%s, %s, %s)",
+                        (git_id, "local_git", json.dumps(git_config))
+                    )
         conn.commit()
         conn.close()
         print("Database tables initialized.")
@@ -147,3 +187,44 @@ def get_filter_options():
     except Exception as e:
         print(f"Error fetching filter options: {e}")
         return [], []
+
+def get_data_connectors():
+    """Get all configured data connectors."""
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, type, config, last_sync_value FROM data_connectors")
+            rows = cur.fetchall()
+        conn.close()
+        
+        connectors = []
+        for row in rows:
+            config_val = row[2]
+            if isinstance(config_val, str):
+                config_val = json.loads(config_val)
+                
+            connectors.append({
+                "id": row[0],
+                "type": row[1],
+                "config": config_val,
+                "last_sync_value": row[3]
+            })
+        return connectors
+    except Exception as e:
+        print(f"Error getting data connectors: {e}")
+        return []
+
+def set_sync_state(connector_id: str, value: str):
+    """Set the last sync state for a connector."""
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE data_connectors 
+                SET last_sync_value = %s 
+                WHERE id = %s
+            """, (value, connector_id))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error setting sync state for {connector_id}: {e}")

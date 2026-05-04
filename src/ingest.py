@@ -1,38 +1,46 @@
-from db import get_vector_store
+from db import get_vector_store, get_data_connectors, set_sync_state, init_db
 from langchain_core.documents import Document
 
-def ingest_mock_data():
+from connectors.email_connector import EmailConnector
+from connectors.git_connector import GitConnector
+
+def sync_connectors():
+    # Ensure DB tables exist
+    init_db()
+    
     print("Connecting to vector store...")
     vector_store = get_vector_store()
     
-    # Simulate data coming from a Jira connector and a Git connector
-    mock_documents = [
-        Document(
-            page_content="Ticket-404: Root cause identified as null pointer in auth module. Fix deployed to staging, awaiting QA signoff. (Jira update by Alice)",
-            metadata={"source": "jira", "ticket_id": "Ticket-404"}
-        ),
-        Document(
-            page_content="Ticket-405: The UI is completely broken on Safari. Investigating CSS grid issues. (Jira update by Bob)",
-            metadata={"source": "jira", "ticket_id": "Ticket-405"}
-        ),
-        Document(
-            page_content="Commit abc1234: Fixed null pointer exception in AuthController.java by adding null check before accessing token. (Git commit by Alice)",
-            metadata={"source": "git", "commit_hash": "abc1234"}
-        ),
-        Document(
-            page_content="Slack message from Charlie: 'Hey guys, when is the staging deployment happening for the auth fix?' Alice replied: 'It is deployed right now, waiting for QA.'",
-            metadata={"source": "slack", "channel": "dev-ops"}
-        ),
-        Document(
-            page_content="Email from Dave (Support): 'Customer reported Ticket-404 still occurring for them. Can we get a status update?'",
-            metadata={"source": "email", "sender": "Dave"}
-        )
-    ]
+    db_connectors = get_data_connectors()
     
-    print("Ingesting mock documents into PGVector...")
-    # Add documents to the vector store
-    vector_store.add_documents(mock_documents)
-    print("Ingestion complete! Run the agent to query this knowledge.")
+    connectors = []
+    for dc in db_connectors:
+        if dc["type"] == "email_imap":
+            connectors.append((EmailConnector(dc["id"], dc["config"]), dc["last_sync_value"]))
+        elif dc["type"] == "local_git":
+            connectors.append((GitConnector(dc["id"], dc["config"]), dc["last_sync_value"]))
+        else:
+            print(f"Unknown connector type: {dc['type']}")
+    
+    all_docs = []
+    for connector, state in connectors:
+        print(f"Fetching updates from {connector.connector_id} (last sync state: {state})...")
+        
+        docs, new_state = connector.fetch_updates(state)
+        if docs:
+            print(f"Found {len(docs)} new documents from {connector.connector_id}.")
+            all_docs.extend(docs)
+            
+            # Update state immediately for this connector
+            if new_state:
+                set_sync_state(connector.connector_id, new_state)
+            
+    if all_docs:
+        print(f"Ingesting {len(all_docs)} total documents into PGVector...")
+        vector_store.add_documents(all_docs)
+        print("Ingestion complete! Run the agent to query this knowledge.")
+    else:
+        print("No new documents found across all connectors.")
 
 if __name__ == "__main__":
-    ingest_mock_data()
+    sync_connectors()
