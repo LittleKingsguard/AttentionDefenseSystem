@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from agent import graph, AgentState
 from db import init_db, insert_log
+from ui import request_human_approval
 
 # Load environment variables (like OPENAI_API_KEY)
 load_dotenv()
@@ -52,10 +53,6 @@ def main():
         print("\n=== HUMAN APPROVAL REQUIRED ===")
         print("Opening desktop notification UI...")
         
-        # Import the UI module
-        from ui import request_human_approval
-        
-        # Open the UI window and block until a decision is made
         # Log the received message now that we have extracted the topic
         insert_log("received", state['requester'], state.get('topic', 'General'), state['incoming_message'], None)
         

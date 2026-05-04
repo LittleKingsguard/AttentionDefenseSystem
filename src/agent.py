@@ -1,9 +1,13 @@
 import os
+import json
 from typing import TypedDict, Annotated, Optional
 from langgraph.graph import StateGraph, END
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
+from db import get_vector_store
 
 class AgentState(TypedDict):
     incoming_message: str
@@ -15,12 +19,26 @@ class AgentState(TypedDict):
     final_response: Optional[str]
 
 def get_llm():
-    # If no key is set, we return None and use mock logic for the prototype
-    if not os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY") == "your_openai_api_key_here":
+    provider = os.environ.get("LLM_PROVIDER", "openai").lower()
+    model_name = os.environ.get("LLM_MODEL", "gpt-3.5-turbo")
+    
+    if provider == "openai":
+        if not os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY") == "your_openai_api_key_here":
+            return None
+        return ChatOpenAI(model=model_name, temperature=0)
+        
+    elif provider == "anthropic":
+        if not os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") == "your_anthropic_api_key_here":
+            return None
+        return ChatAnthropic(model=model_name, temperature=0)
+        
+    elif provider == "ollama":
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        return ChatOllama(model=model_name, base_url=base_url, temperature=0)
+        
+    else:
+        print(f"[WARNING] Unknown LLM_PROVIDER '{provider}'. Falling back to mock logic.")
         return None
-    return ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-
-import json
 
 def analyze_message(state: AgentState) -> AgentState:
     """Analyze if the message requires a status update and extract topic."""
@@ -55,7 +73,6 @@ Message: {state['incoming_message']}"""
 
 def retrieve_context(state: AgentState) -> AgentState:
     """Retrieve relevant context from the vector database."""
-    from db import get_vector_store
     
     vector_store = get_vector_store()
     # Perform similarity search
