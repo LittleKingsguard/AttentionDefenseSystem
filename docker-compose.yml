@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5444:5432"
+    environment:
+      POSTGRES_USER: attention_agent
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: knowledge_base
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata: # volume location for persistent storage
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./postgres_data
