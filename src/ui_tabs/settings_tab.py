@@ -1,11 +1,12 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
-    QScrollArea, QComboBox, QLineEdit, QStackedWidget, QFormLayout
+    QScrollArea, QComboBox, QLineEdit, QStackedWidget, QFormLayout, QMessageBox
 )
 from PyQt6.QtCore import Qt
-from db import get_data_connectors, upsert_data_connector, delete_data_connector
+from db import get_data_connectors, upsert_data_connector, delete_data_connector, clear_connector_data
 from .styles import get_btn_style, get_combo_style
 import os
+from ingest import sync_connectors
 
 class SettingsTab(QWidget):
     def __init__(self):
@@ -123,11 +124,32 @@ class SettingsTab(QWidget):
             btn_del.clicked.connect(lambda checked, cid=c['id'], pt=parent_widget, ct=c_type: self.delete_connector(cid, pt, ct))
             flayout.addWidget(btn_del)
             
+            btn_clear = QPushButton("Clear & Reload")
+            btn_clear.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_clear.setStyleSheet(get_btn_style("#F57C00", "#E65100"))
+            btn_clear.clicked.connect(lambda checked, cid=c['id'], pt=parent_widget, ct=c_type: self.clear_and_reload_connector(cid, pt, ct))
+            flayout.addWidget(btn_clear)
+            
             layout.addWidget(frame)
 
     def delete_connector(self, cid, parent_widget, c_type):
         if delete_data_connector(cid):
             self.refresh_connector_list(parent_widget, c_type)
+
+    def clear_and_reload_connector(self, cid, parent_widget, c_type):
+        reply = QMessageBox.question(self, 'Confirm Clear & Reload',
+                                     f'Are you sure you want to clear and reload all data for connector {cid}?',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            if clear_connector_data(cid):
+                # Trigger sync specifically for this connector
+                sync_connectors(target_connector_id=cid)
+                QMessageBox.information(self, 'Success', f'Connector {cid} has been successfully cleared and reloaded.')
+                self.refresh_connector_list(parent_widget, c_type)
+            else:
+                QMessageBox.warning(self, 'Error', f'Failed to clear data for {cid}.')
 
     def init_add_connector_page(self, parent_widget):
         layout = QVBoxLayout(parent_widget)

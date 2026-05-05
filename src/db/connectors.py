@@ -71,3 +71,27 @@ def delete_data_connector(connector_id: str):
     except Exception as e:
         print(f"Error deleting data connector: {e}")
         return False
+
+def clear_connector_data(connector_id: str):
+    """Delete vectorized documents and reset sync state for a connector."""
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Delete associated vector documents
+            cur.execute("""
+                DELETE FROM langchain_pg_embedding 
+                WHERE cmetadata->>'connector_id' = %s
+            """, (connector_id,))
+            
+            # Reset sync state
+            cur.execute("""
+                UPDATE data_connectors 
+                SET last_sync_value = NULL 
+                WHERE id = %s
+            """, (connector_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error clearing connector data: {e}")
+        return False

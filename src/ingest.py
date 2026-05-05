@@ -4,7 +4,9 @@ from langchain_core.documents import Document
 from connectors.email_connector import EmailConnector
 from connectors.git_connector import GitConnector
 
-def sync_connectors():
+from typing import Optional
+
+def sync_connectors(target_connector_id: Optional[str] = None):
     # Ensure DB tables exist
     init_db()
     
@@ -15,6 +17,9 @@ def sync_connectors():
     
     connectors = []
     for dc in db_connectors:
+        if target_connector_id and dc["id"] != target_connector_id:
+            continue
+            
         if dc["type"] == "email_imap":
             connectors.append((EmailConnector(dc["id"], dc["config"]), dc["last_sync_value"]))
         elif dc["type"] == "local_git":
