@@ -1,7 +1,7 @@
 import uuid
 import os
 from dotenv import load_dotenv
-from agent import graph, AgentState
+from agents import graph, AgentState
 from db import init_db, insert_log
 from ui import request_human_approval
 
@@ -28,11 +28,13 @@ def main():
     initial_state = AgentState(
         incoming_message=incoming_message,
         requester=requester,
-        requires_response=None,
         topic=None,
-        retrieved_context=None,
+        messages=[],
+        sender="user",
+        requires_response=None,
         drafted_response=None,
-        final_response=None
+        final_response=None,
+        next="supervisor"
     )
     
     # Run the graph with a specific thread_id to support memory/breakpoints
