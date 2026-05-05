@@ -5,8 +5,9 @@ from ..state import AgentState, get_llm, tools
 def email_expert_node(state: AgentState):
     llm = get_llm()
     if not llm:
+        print("[WARNING] LLM not configured. Email Expert returning mock data.")
         return {"messages": [AIMessage(content="Mock email info found.", name="email_expert")], "sender": "email_expert"}
-    agent = create_react_agent(llm, tools=tools, state_modifier="You are an Email Expert. Use tools to find information about past correspondence, meetings, and schedules.")
+    agent = create_react_agent(llm, tools=tools, prompt="You are an Email Expert. Use tools to find information about past correspondence, meetings, and schedules.")
     invoke_msgs = [HumanMessage(content=f"Request: {state['incoming_message']}")] + list(state.get("messages", []))
     result = agent.invoke({"messages": invoke_msgs})
     final_msg = result["messages"][-1]

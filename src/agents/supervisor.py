@@ -4,6 +4,7 @@ from .state import AgentState, Route, get_llm
 def supervisor_node(state: AgentState):
     llm = get_llm()
     if not llm:
+        print("[WARNING] LLM not configured. Supervisor routing using mock fallback logic.")
         msg = state["incoming_message"].lower()
         if not state.get("messages"):
             if "ticket" in msg or "commit" in msg: return {"next": "git_expert", "topic": "Ticket-404"}

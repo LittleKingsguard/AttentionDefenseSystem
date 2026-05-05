@@ -4,6 +4,7 @@ from .state import AgentState, get_llm
 def drafter_node(state: AgentState) -> dict:
     llm = get_llm()
     if not llm:
+        print("[WARNING] LLM not configured. Using mock drafted response.")
         draft = f"Hello {state['requester']},\n\nHere is a drafted response based on the expert findings.\n\nBest."
         return {"drafted_response": draft, "requires_response": True, "next": "human_approval"}
         
