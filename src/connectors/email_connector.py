@@ -1,7 +1,9 @@
 import os
 import imaplib
 import email
+import datetime
 from email.header import decode_header
+from email.utils import parsedate_to_datetime
 from typing import List, Tuple, Optional
 from langchain_core.documents import Document
 from connectors.base import BaseConnector
@@ -84,10 +86,28 @@ class EmailConnector(BaseConnector):
                             if body_payload:
                                 body = body_payload.decode(errors="ignore")
                             
+                        date_header = msg_obj.get("Date")
+                        source_ts = ""
+                        if date_header:
+                            try:
+                                dt = parsedate_to_datetime(date_header)
+                                source_ts = dt.astimezone(datetime.timezone.utc).isoformat()
+                            except:
+                                source_ts = ""
+                                
+                        retrieved_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                            
                         content = f"Email Subject: {subject}\nFrom: {sender}\nBody: {body}"
                         docs.append(Document(
                             page_content=content,
-                            metadata={"source": "email", "sender": sender, "subject": subject}
+                            metadata={
+                                "source": "email", 
+                                "sender": sender, 
+                                "subject": subject,
+                                "connector_id": self.connector_id,
+                                "source_timestamp": source_ts,
+                                "retrieved_timestamp": retrieved_ts
+                            }
                         ))
                         
                 if uid > max_uid:

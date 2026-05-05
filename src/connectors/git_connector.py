@@ -1,4 +1,5 @@
 import os
+import datetime
 from typing import List, Tuple, Optional
 from langchain_core.documents import Document
 from connectors.base import BaseConnector
@@ -31,10 +32,20 @@ class GitConnector(BaseConnector):
                 if commit_ts > max_ts:
                     max_ts = commit_ts
                     
+                source_ts = datetime.datetime.fromtimestamp(commit_ts, tz=datetime.timezone.utc).isoformat()
+                retrieved_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                
                 content = f"Commit: {commit.hexsha}\nAuthor: {commit.author.name}\nMessage: {commit.message}"
                 docs.append(Document(
                     page_content=content,
-                    metadata={"source": "git", "commit_hash": commit.hexsha, "author": commit.author.name}
+                    metadata={
+                        "source": "git", 
+                        "commit_hash": commit.hexsha, 
+                        "author": commit.author.name,
+                        "connector_id": self.connector_id,
+                        "source_timestamp": source_ts,
+                        "retrieved_timestamp": retrieved_ts
+                    }
                 ))
                 
             new_state = str(max_ts)
