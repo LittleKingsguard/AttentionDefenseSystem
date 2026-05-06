@@ -1,0 +1,16 @@
+pytest
+pytest-qt
+pytest-asyncio
+pytest-mock
+PyQt6
+python-dotenv
+psycopg[binary]
+langgraph
+langchain_core
+langchain_openai
+langchain_anthropic
+langchain_ollama
+langchain_postgres
+langchain_community
+pydantic
+GitPython
