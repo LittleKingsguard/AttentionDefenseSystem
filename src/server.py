@@ -1,5 +1,6 @@
 import os
 import uuid
+import datetime
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -8,8 +9,9 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 
 from agents import graph, AgentState
-from db import init_db, insert_log
+from db import init_db, insert_log, get_vector_store
 from ui import request_human_approval
+from langchain_core.documents import Document
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../.env.example'))
 
@@ -24,6 +26,19 @@ class HandshakeRequest(BaseModel):
 
 def process_a2a_message(sender_id: str, payload: str):
     print(f"\n[A2A Server] Processing incoming message from {sender_id}...")
+    
+    # Ingest the incoming message into the document store
+    vector_store = get_vector_store()
+    vector_store.add_documents([
+        Document(
+            page_content=payload,
+            metadata={
+                "source": "a2a_message",
+                "sender": sender_id,
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }
+        )
+    ])
     
     initial_state = AgentState(
         incoming_message=payload,
@@ -57,6 +72,20 @@ def process_a2a_message(sender_id: str, payload: str):
             
             if decision and decision["action"] in ["approve", "edit"]:
                 insert_log("sent", state['requester'], state.get('topic', 'A2A Message'), decision["content"], decision["action"])
+                
+                # Ingest the outgoing response
+                vector_store.add_documents([
+                    Document(
+                        page_content=decision["content"],
+                        metadata={
+                            "source": "a2a_response",
+                            "recipient": state['requester'],
+                            "action": decision["action"],
+                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                        }
+                    )
+                ])
+                
                 graph.update_state(config, {"final_response": decision["content"]})
                 graph.invoke(None, config)
             else:

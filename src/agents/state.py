@@ -35,7 +35,7 @@ class AgentState(TypedDict):
     next: str
 
 class Route(BaseModel):
-    next: Literal["git_expert", "email_expert", "drafter", "FINISH"] = Field(
+    next: Literal["git_expert", "email_expert", "a2a_expert", "drafter", "FINISH"] = Field(
         description="The next agent to route to, or FINISH if no response is needed."
     )
     topic: str = Field(
