@@ -6,7 +6,7 @@ from db import init_db, insert_log
 from ui import request_human_approval
 
 # Load environment variables (like OPENAI_API_KEY)
-load_dotenv('.env.example')
+load_dotenv(os.path.join(os.path.dirname(__file__), '../.env.example'))
 
 def main():
     # Initialize the relational database tables

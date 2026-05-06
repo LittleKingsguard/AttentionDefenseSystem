@@ -13,10 +13,11 @@ def supervisor_node(state: AgentState):
 
     supervisor_prompt = """You are a supervisor managing a conversation between these workers: 'git_expert', 'email_expert', 'drafter'.
 Given the following user request and the conversation history, decide who should act next. 
-- If the user is asking about code, commits, PRs, or defects (like Ticket-404) and we haven't researched it yet, route to 'git_expert'.
-- If the user is asking about emails, schedules, or meetings and we haven't researched it yet, route to 'email_expert'.
-- If the experts have gathered enough information, route to 'drafter' to write the final response.
-- If the message is just a greeting or statement that requires NO response, route to 'FINISH'.
+- If the user is asking about code, commits, PRs, or defects and the 'git_expert' HAS NOT answered yet, route to 'git_expert'.
+- If the user is asking about emails, schedules, or meetings and the 'email_expert' HAS NOT answered yet, route to 'email_expert'.
+- If the experts have responded (even if they found no information), route to 'drafter' to write the final response. DO NOT route back to an expert that has already answered.
+- If the message is just a greeting or statement that expects absolutely no feedback, route to 'FINISH'.
+- IMPORTANT: "FINISH" is ONLY for messages that expect no feedback. If the user asked a question, you MUST route to 'drafter' to provide an answer, even if the experts could not find any relevant information.
 """
     messages = [SystemMessage(content=supervisor_prompt), HumanMessage(content=state["incoming_message"])] + list(state.get("messages", []))
     try:

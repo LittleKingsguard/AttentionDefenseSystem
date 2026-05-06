@@ -3,7 +3,7 @@ import json
 import psycopg
 from dotenv import load_dotenv
 
-load_dotenv('.env.example')
+load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env.example'))
 
 CONNECTION_STRING = os.getenv("DATABASE_URL", "postgresql+psycopg://attention_agent:password@localhost:5444/knowledge_base")
 

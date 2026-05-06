@@ -19,7 +19,7 @@ class GitConnector(BaseConnector):
         new_state = last_sync_state
         last_ts = float(last_sync_state) if last_sync_state else 0.0
         try:
-            repo = Repo(self.repo_path)
+            repo = Repo(self.repo_path, search_parent_directories=True)
             # Fetch the 10 most recent commits to prototype
             commits = list(repo.iter_commits('HEAD', max_count=10))
             max_ts = last_ts
