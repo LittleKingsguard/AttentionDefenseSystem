@@ -5,8 +5,8 @@ from agents import graph, AgentState
 from db import init_db, insert_log
 from ui import request_human_approval
 
-# Load environment variables (like OPENAI_API_KEY)
-load_dotenv(os.path.join(os.path.dirname(__file__), '../.env.example'))
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
 
 def main():
     # Initialize the relational database tables

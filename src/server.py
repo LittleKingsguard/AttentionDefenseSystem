@@ -13,7 +13,7 @@ from db import init_db, insert_log, get_vector_store
 from ui import request_human_approval
 from langchain_core.documents import Document
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '../.env.example'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
 
 app = FastAPI(title="Attention Defense System - A2A Node")
 
