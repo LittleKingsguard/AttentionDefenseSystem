@@ -52,3 +52,32 @@ def send_response(state: AgentState) -> AgentState:
         print(f"--------------------------------------------------\n")
         
     return state
+
+def datalink_ingest_node(state: AgentState) -> dict:
+    """
+    Optional node that rewrites the final interaction into a factual summary
+    and pushes it to the Datalink store.
+    """
+    from datalink_client import push_to_datalink, summarize_for_datalink
+    
+    # We only ingest if there was a final response
+    if state.get("final_response"):
+        print(f"\n[SYSTEM] Preparing factual summary for Datalink...")
+        
+        # Combine incoming message and final response for full context
+        full_interaction = f"Inbound from {state['requester']}: {state['incoming_message']}\nResponse: {state['final_response']}"
+        
+        # Summarize to strip personal tone/preferences
+        factual_summary = summarize_for_datalink(full_interaction)
+        
+        # Push to datalink
+        # Use 'a2a' as platform for interactions
+        push_to_datalink(
+            platform="a2a",
+            channel_id=state.get("topic") or "general_interaction",
+            user_id=state["requester"],
+            content=factual_summary
+        )
+        print(f"[SYSTEM] Factual summary pushed to Datalink.")
+        
+    return {"next": "FINISH"}

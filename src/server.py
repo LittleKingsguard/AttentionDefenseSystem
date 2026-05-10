@@ -13,6 +13,8 @@ from agents import graph, AgentState
 from db import init_db, insert_log, get_vector_store
 from ui import request_human_approval
 from langchain_core.documents import Document
+from registry_client import register_agent
+from datalink_client import query_datalink
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
 
@@ -24,6 +26,12 @@ class HandshakeRequest(BaseModel):
     urgency: str
     payload: str
     signature: str
+
+class RadarNotification(BaseModel):
+    topic: str
+    category: str
+    action: str
+    message: str
 
 def process_a2a_message(sender_id: str, payload: str):
     print(f"\n[A2A Server] Processing incoming message from {sender_id}...")
@@ -97,6 +105,29 @@ def process_a2a_message(sender_id: str, payload: str):
 @app.on_event("startup")
 def startup_event():
     init_db()
+    # Registration with central discovery registry
+    user_id = os.environ.get("SENDER_ID", "user@example.com")
+    agent_address = os.environ.get("AGENT_ADDRESS", "http://localhost:8003")
+    register_agent(user_id, agent_address)
+
+@app.post("/api/v1/notify", status_code=200)
+async def radar_notify(notification: RadarNotification):
+    """
+    Receives alerts from Radar when a tracked topic is mentioned.
+    """
+    print(f"\n[RADAR] Notification received for topic: {notification.topic}")
+    print(f"[RADAR] Message: {notification.message}")
+    
+    # Automatically query Datalink to gather context as per spec
+    print(f"[RADAR] Querying Datalink for recent context on '{notification.topic}'...")
+    results = query_datalink(query=notification.topic, top_k=3)
+    
+    if results:
+        print(f"[RADAR] Found {len(results)} relevant entries in Datalink store.")
+    else:
+        print(f"[RADAR] No additional context found in Datalink.")
+        
+    return {"status": "success", "processed_topic": notification.topic}
 
 @app.post("/inbound/handshake", status_code=202)
 async def inbound_handshake(request: HandshakeRequest, background_tasks: BackgroundTasks):
@@ -115,4 +146,6 @@ async def inbound_handshake(request: HandshakeRequest, background_tasks: Backgro
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # Change port to 8003 to avoid conflict with Datalink (8001) and Radar (8002)
+    port = int(os.environ.get("AGENT_PORT", 8003))
+    uvicorn.run(app, host="0.0.0.0", port=port)

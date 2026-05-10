@@ -7,7 +7,7 @@ from .experts.git_expert import git_expert_node
 from .experts.email_expert import email_expert_node
 from .experts.a2a_expert import a2a_expert_node
 from .drafter import drafter_node
-from .human import human_approval, send_response
+from .human import human_approval, send_response, datalink_ingest_node
 
 def build_graph():
     builder = StateGraph(AgentState)
@@ -19,6 +19,7 @@ def build_graph():
     builder.add_node("drafter", drafter_node)
     builder.add_node("human_approval", human_approval)
     builder.add_node("send_response", send_response)
+    builder.add_node("datalink_ingest", datalink_ingest_node)
 
     builder.set_entry_point("supervisor")
 
@@ -39,7 +40,8 @@ def build_graph():
     builder.add_edge("a2a_expert", "supervisor")
     builder.add_edge("drafter", "human_approval")
     builder.add_edge("human_approval", "send_response")
-    builder.add_edge("send_response", END)
+    builder.add_edge("send_response", "datalink_ingest")
+    builder.add_edge("datalink_ingest", END)
 
     memory = MemorySaver()
     return builder.compile(checkpointer=memory, interrupt_before=["human_approval"])

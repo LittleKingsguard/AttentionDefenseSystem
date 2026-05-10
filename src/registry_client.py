@@ -56,3 +56,31 @@ def get_agent_address(user_id: str) -> Optional[str]:
     """
     record = _get_user_record(user_id)
     return record.get("address")
+
+def register_agent(user_id: str, address: str, interaction_skills: Optional[dict] = None):
+    """
+    Registers the current agent in the central registry.
+    """
+    payload = {
+        "user_id": user_id,
+        "address": address,
+        "interaction_skills": interaction_skills or {
+            "relationship_type": "standard",
+            "tone_preference": "professional",
+            "rules": [],
+            "permissions": {}
+        }
+    }
+    try:
+        # Note: The registry expects POST /api/v1/registry/
+        # REGISTRY_URL is already defined as .../api/v1/registry
+        url = f"{REGISTRY_URL}/"
+        response = requests.post(url, json=payload, timeout=5)
+        if response.status_code in [200, 201]:
+            print(f"[RegistryClient] Successfully registered agent for {user_id} at {address}")
+            return True
+        else:
+            print(f"[RegistryClient] Registration failed: {response.status_code} {response.text}")
+    except Exception as e:
+        print(f"[RegistryClient] Error during registration: {e}")
+    return False
