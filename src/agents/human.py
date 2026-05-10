@@ -12,7 +12,7 @@ def human_approval(state: AgentState) -> dict:
         return {"final_response": state.get("drafted_response")}
     return {}
 
-def send_response(state: AgentState) -> dict:
+def send_response(state: AgentState) -> AgentState:
     sender_id = os.environ.get("SENDER_ID", "local-agent-001")
     recipient_id = state['requester']
     message_content = state['final_response']

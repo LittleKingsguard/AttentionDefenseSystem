@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_ollama import ChatOllama
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from db import get_vector_store
 
 @tool
@@ -54,7 +55,7 @@ def get_llm():
     elif provider == "anthropic":
         if not os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") == "your_anthropic_api_key_here":
             return None
-        return ChatAnthropic(model=model_name, temperature=0)
+        return ChatAnthropic(model_name=model_name, temperature=0, timeout=None, stop=None)
         
     elif provider == "ollama":
         base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")

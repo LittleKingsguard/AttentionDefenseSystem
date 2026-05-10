@@ -1,6 +1,7 @@
 import uuid
 import os
 from dotenv import load_dotenv
+from langchain_core.runnables import RunnableConfig
 from agents import graph, AgentState
 from db import init_db, insert_log
 from ui import request_human_approval
@@ -39,7 +40,7 @@ def main():
     
     # Run the graph with a specific thread_id to support memory/breakpoints
     thread_id = str(uuid.uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     
     print("--- Agent is processing the incoming message ---")
     for event in graph.stream(initial_state, config):
@@ -59,7 +60,7 @@ def main():
         insert_log("received", state['requester'], state.get('topic', 'General'), state['incoming_message'], None)
         
         # Open the UI window and block until a decision is made
-        decision = request_human_approval(state['requester'], state['incoming_message'], draft)
+        decision = request_human_approval(state['requester'], state['incoming_message'], draft or "")
         
         # Log the outgoing decision to database
         if decision and decision["action"] in ["approve", "edit"]:

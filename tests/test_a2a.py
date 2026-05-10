@@ -1,4 +1,5 @@
 import pytest
+from typing import cast
 from unittest.mock import patch, MagicMock
 from agents.human import send_response
 from agents.state import AgentState
@@ -23,7 +24,7 @@ def test_send_response_outbound_discovery():
         mock_get_addr.return_value = "http://agent-x-endpoint:8001"
         mock_post.return_value.status_code = 202
         
-        result = send_response(state)
+        result = send_response(cast(AgentState, state))
         
         mock_get_addr.assert_called_once_with("Agent-X")
         mock_post.assert_called_once()
@@ -51,7 +52,7 @@ def test_send_response_fallback_to_console():
         
         mock_get_addr.return_value = None
         
-        result = send_response(state)
+        result = send_response(cast(AgentState, state))
         
         mock_get_addr.assert_called_once_with("Unknown-Agent")
         mock_post.assert_not_called()

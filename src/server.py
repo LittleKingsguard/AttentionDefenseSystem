@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import sys
 sys.path.append(os.path.dirname(__file__))
 
+from langchain_core.runnables import RunnableConfig
 from agents import graph, AgentState
 from db import init_db, insert_log, get_vector_store
 from ui import request_human_approval
@@ -53,7 +54,7 @@ def process_a2a_message(sender_id: str, payload: str):
     )
     
     thread_id = str(uuid.uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     
     # Run graph
     graph.invoke(initial_state, config)
@@ -68,7 +69,7 @@ def process_a2a_message(sender_id: str, payload: str):
         # Note: In a production system, this GUI call needs to be dispatched to the main thread.
         # For this prototype, we call it directly.
         try:
-            decision = request_human_approval(state['requester'], state['incoming_message'], draft)
+            decision = request_human_approval(state['requester'], state['incoming_message'], draft or "")
             
             if decision and decision["action"] in ["approve", "edit"]:
                 insert_log("sent", state['requester'], state.get('topic', 'A2A Message'), decision["content"], decision["action"])

@@ -25,7 +25,13 @@ Given the following user request and the conversation history, decide who should
     try:
         router = llm.with_structured_output(Route)
         decision = router.invoke(messages)
-        return {"next": decision.next, "topic": decision.topic}
+        if decision is None:
+            raise ValueError("LLM failed to return a valid routing decision.")
+            
+        # Handle both dict and object (BaseModel) returns for robustness
+        if isinstance(decision, dict):
+            return {"next": decision.get("next", "drafter"), "topic": decision.get("topic", "General")}
+        return {"next": getattr(decision, "next", "drafter"), "topic": getattr(decision, "topic", "General")}
     except Exception as e:
         return {"next": "git_expert" if not state.get("messages") else "drafter", "topic": "General"}
 

@@ -1,9 +1,10 @@
 import pytest
+from typing import cast
 from agents.supervisor import supervisor_node, supervisor_router
 from agents.state import AgentState
 
 def test_supervisor_router():
-    state = {"next": "drafter"}
+    state = cast(AgentState, {"next": "drafter"})
     assert supervisor_router(state) == "drafter"
 
 def test_supervisor_node_fallback(monkeypatch):
@@ -23,16 +24,16 @@ def test_supervisor_node_fallback(monkeypatch):
         "final_response": None,
         "next": "supervisor"
     }
-    result = supervisor_node(state)
+    result = supervisor_node(cast(AgentState, state))
     assert result["next"] == "git_expert"
     assert result["topic"] == "Ticket-404"
     
     # Test general email routing
     state["incoming_message"] = "When is the meeting?"
-    result = supervisor_node(state)
+    result = supervisor_node(cast(AgentState, state))
     assert result["next"] == "email_expert"
     
     # Test drafter routing when messages exist
     state["messages"] = ["Some previous context from experts"]
-    result = supervisor_node(state)
+    result = supervisor_node(cast(AgentState, state))
     assert result["next"] == "drafter"

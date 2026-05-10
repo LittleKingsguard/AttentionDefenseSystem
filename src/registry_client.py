@@ -1,5 +1,6 @@
 import os
 import requests
+from typing import Optional
 from datetime import datetime, timedelta
 
 # Simple in-memory cache
@@ -40,7 +41,7 @@ def _get_user_record(user_id: str) -> dict:
         
     return {}
 
-def get_interaction_skills(user_id: str) -> dict:
+def get_interaction_skills(user_id: str) -> Optional[dict]:
     """
     Fetches the interaction skills for a given user from the central registry.
     Returns the skills dictionary, or None if not found.
@@ -48,7 +49,7 @@ def get_interaction_skills(user_id: str) -> dict:
     record = _get_user_record(user_id)
     return record.get("interaction_skills")
 
-def get_agent_address(user_id: str) -> str:
+def get_agent_address(user_id: str) -> Optional[str]:
     """
     Fetches the network address (URL) for a given agent from the registry.
     Useful for outbound A2A communication.

@@ -4,6 +4,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.embeddings.fake import FakeEmbeddings
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.embeddings import JinaEmbeddings
+from pydantic import SecretStr
 from .core import CONNECTION_STRING
 
 COLLECTION_NAME = "agent_knowledge"
@@ -26,7 +27,7 @@ def get_embeddings():
         if not api_key or api_key == "your_jina_api_key_here":
             print("[WARNING] Missing JINA_API_KEY. Falling back to FakeEmbeddings.")
             return FakeEmbeddings(size=768)
-        return JinaEmbeddings(jina_api_key=api_key, model_name=model_name)
+        return JinaEmbeddings(jina_api_key=SecretStr(api_key), model_name=model_name, session=None)
         
     else:
         print(f"[WARNING] Unknown EMBEDDINGS_PROVIDER '{provider}'. Falling back to FakeEmbeddings.")
